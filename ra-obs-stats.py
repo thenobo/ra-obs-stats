@@ -20,7 +20,6 @@ logging.info('Gathering stats for %s from {BASE_URL}', PLAYER_ID)
 
 while True:
     logging.info("Getting latest games from API")
-    print(f'{BASE_URL}/Player/{PLAYER_ID}/Matches')
     last_games = urlopen(f'{BASE_URL}/Player/{PLAYER_ID}/Matches')
     last_games_json = json.loads(last_games.read())
     logging.info("Writing latest games to files")
