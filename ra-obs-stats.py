@@ -19,6 +19,7 @@ parser.add_argument('id')
 parser.add_argument('--matches-ticker', dest='matches_ticker', action='store_true')
 parser.add_argument('--player-stats', dest='player_stats', action='store_true')
 parser.add_argument('--session-stats', dest='session_stats', action='store_true')
+parser.add_argument('--specify-session-start-time', dest='provided_session_start_time', type=str)
 args = parser.parse_args()
 PLAYER_ID = args.id
 MATCHES_TICKER_ENABLED = args.matches_ticker
@@ -157,7 +158,13 @@ def main():
     
     logging.debug('API base: %s' % (BASE_URL))
     logging.debug('Player ID: %s' % (PLAYER_ID))
-    SESSION_START = datetime.utcnow()
+    if args.provided_session_start_time:
+        custom_start_time = args.provided_session_start_time
+        dt_timestamp = datetime(datetime.today().year, datetime.today().month, datetime.today().day, int(custom_start_time.split(":")[0]), int(custom_start_time.split(":")[1]), 00)
+        print("Using custom start time %s" % dt_timestamp)
+        SESSION_START = dt_timestamp
+    else:
+        SESSION_START = datetime.utcnow()
     logging.debug('Session start: %s' % (SESSION_START))
     while True:
         if (MATCHES_TICKER_ENABLED == True) or (SESSION_STATS_ENABLED == True):
