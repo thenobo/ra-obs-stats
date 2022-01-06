@@ -10,7 +10,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     datefmt='%Y-%m-%d %H:%M:%S')
 
-BASE_URL = "https://cncstatsapibeta.azurewebsites.net/api"
+BASE_URL = "https://cnc-stats-api.azurewebsites.net/api"
 TICKER_GAME_HISTORY_DEPTH = 3
 REFRESH_RATE_SECS = 60
 
