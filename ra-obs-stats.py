@@ -138,6 +138,7 @@ def get_match_history():
     logging.debug(f"Getting latest matches from {endpoint}")
     match_history = urlopen(endpoint)
     match_history_json = json.loads(match_history.read())
+    logging.debug(f"Found {len(match_history_json)} matches")
     return match_history_json
 
 def main():
