@@ -4,6 +4,8 @@ Running this script will grab various statistics from cncstats, at regular inter
 
 ## Quick start guide
 
+### Get the script ready
+
 * Download and install Python from **[here](https://www.python.org/ftp/python/3.10.1/python-3.10.1-amd64.exe)**
   * Make sure 'Add Python 3.10 to PATH' checkbox is selected before pressing 'Install Now'
   * ![install_python](https://i.imgur.com/So6mfwM.png)
@@ -24,3 +26,13 @@ Running this script will grab various statistics from cncstats, at regular inter
     * ![](https://i.imgur.com/42gTsIw.png)
   * In the location where you downloaded `ra-obs-stats.py` you should see some text files produced by the script
     * ![](https://i.imgur.com/bDesnvr.png)
+
+### Add the text files to (SL)OBS
+
+* In SL(OBS) add a new Text (GDI+) source to your scene
+  * ![](https://i.imgur.com/k0rINVM.png)
+* In the 'Settings for Text (GDI+)' window, tick 'Read from File' and select 'Browse'
+  * ![](https://i.imgur.com/bU4bT5t.png)
+  * Browse to the location of the text file outputs (in the same directory as `ra-stats-obs.py`)
+    * ![](https://i.imgur.com/CThLb6M.png)
+  * Repeat the above for each statistic you want to show
