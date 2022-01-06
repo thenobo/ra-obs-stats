@@ -14,7 +14,7 @@ Running this script will grab various statistics from cncstats, at regular inter
     * In the command prompt, type `python`, you should see...
     * ![](https://i.imgur.com/xrdSugB.png)
     * Type `exit()` and press enter to close python
-* Download `ra-obs-stats.py` from **[here](https://raw.githubusercontent.com/thenobo/ra-obs-stats/main/ra-obs-stats.py)**
+* Download `ra-obs-stats.py` from **[here](https://raw.githubusercontent.com/thenobo/ra-obs-stats/main/ra-obs-stats.py)** (right click -> 'Save link as')
 * Right click on your desktop and create a new shortcut
   * ![](https://i.imgur.com/DkpLW8I.png)
   * Click 'Browse' and find `ra-obs-stats.py` which you downloaded
