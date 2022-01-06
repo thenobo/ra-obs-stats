@@ -140,6 +140,9 @@ def write_session_stats_to_file(SESSION_START):
     session_points_change_file.close()
 
 def main():
+    if (MATCHES_TICKER_ENABLED == False) and (PLAYER_STATS_ENABLED == False) and (SESSION_STATS_ENABLED == False):
+        logging.error("No features specified, provide one or more of --matches-ticker, --player-stats or --session-stats")
+        exit(1)
     logging.debug('Matches ticker: %s' % (MATCHES_TICKER_ENABLED))
     logging.debug('Player stats: %s' % (PLAYER_STATS_ENABLED))
     logging.debug('Session stats: %s' % (SESSION_STATS_ENABLED))
