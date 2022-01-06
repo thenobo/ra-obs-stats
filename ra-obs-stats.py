@@ -25,14 +25,11 @@ MATCHES_TICKER_ENABLED = args.matches_ticker
 PLAYER_STATS_ENABLED = args.player_stats
 SESSION_STATS_ENABLED = args.session_stats
 
-def write_ticker_to_file():
+def write_ticker_to_file(match_history):
     ticker_file_name = "ticker.txt"
     logging.debug(f"Opening {ticker_file_name} for writing")
     ticker = open(ticker_file_name, "w+", encoding="utf-8")
-    endpoint = f'{BASE_URL}/Player/{PLAYER_ID}/Matches'
-    logging.debug(f"Getting latest matches from {endpoint}")
-    last_games = urlopen(endpoint)
-    last_games_json = json.loads(last_games.read())
+    last_games_json = match_history
     ticker_string = f""
     for x in range(0,TICKER_GAME_HISTORY_DEPTH):
         if last_games_json[x]['win'] == True:
@@ -95,7 +92,7 @@ def write_player_stats_to_file():
     logging.debug(f"Closing {ratio_file_name}")
     ratio_file.close()
 
-def write_session_stats_to_file(SESSION_START):
+def write_session_stats_to_file(SESSION_START, match_history):
     session_games_played_file_name = "session_games_played.txt"
     session_points_change_file_name = "session_points_change.txt"
     logging.debug(f"Opening {session_games_played_file_name} for writing")
@@ -103,10 +100,7 @@ def write_session_stats_to_file(SESSION_START):
     logging.debug(f"Opening {session_points_change_file_name} for writing")
     session_points_change_file = open(session_points_change_file_name, "w+", encoding="utf-8")
 
-    endpoint = f'{BASE_URL}/Player/{PLAYER_ID}/Matches'
-    logging.debug(f"Getting latest matches from {endpoint}")
-    last_games = urlopen(endpoint)
-    last_games_json = json.loads(last_games.read())
+    last_games_json = match_history
     matches_since_session_start = []
     first_match_of_session_found = False
     for match in last_games_json:
@@ -139,24 +133,40 @@ def write_session_stats_to_file(SESSION_START):
     logging.debug(f"Closing {session_points_change_file_name}")
     session_points_change_file.close()
 
+def get_match_history():
+    endpoint = f'{BASE_URL}/Player/{PLAYER_ID}/Matches'
+    logging.debug(f"Getting latest matches from {endpoint}")
+    match_history = urlopen(endpoint)
+    match_history_json = json.loads(match_history.read())
+    return match_history_json
+
 def main():
+    # Exit early if no features enabled
     if (MATCHES_TICKER_ENABLED == False) and (PLAYER_STATS_ENABLED == False) and (SESSION_STATS_ENABLED == False):
         logging.error("No features specified, provide one or more of --matches-ticker, --player-stats or --session-stats")
         exit(1)
+
     logging.debug('Matches ticker: %s' % (MATCHES_TICKER_ENABLED))
     logging.debug('Player stats: %s' % (PLAYER_STATS_ENABLED))
     logging.debug('Session stats: %s' % (SESSION_STATS_ENABLED))
+    
+    # If we're doing something which requires the match histort, prep variable
+    if (MATCHES_TICKER_ENABLED == True) or (SESSION_STATS_ENABLED == True):
+        match_history = None
+    
     logging.debug('API base: %s' % (BASE_URL))
     logging.debug('Player ID: %s' % (PLAYER_ID))
     SESSION_START = datetime.utcnow()
     logging.debug('Session start: %s' % (SESSION_START))
     while True:
+        if (MATCHES_TICKER_ENABLED == True) or (SESSION_STATS_ENABLED == True):
+            match_history = get_match_history()
         if MATCHES_TICKER_ENABLED == True:
-            write_ticker_to_file()
+            write_ticker_to_file(match_history)
         if PLAYER_STATS_ENABLED == True:
             write_player_stats_to_file()
         if SESSION_STATS_ENABLED == True:
-            write_session_stats_to_file(SESSION_START)
+            write_session_stats_to_file(SESSION_START, match_history)
         
         logging.info(f"Sleeping for {REFRESH_RATE_SECS} seconds")
         time.sleep(REFRESH_RATE_SECS)
