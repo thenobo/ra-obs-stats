@@ -37,9 +37,6 @@ MATCHES_TICKER_ENABLED = args.matches_ticker
 PLAYER_STATS_ENABLED = args.player_stats
 SESSION_STATS_ENABLED = args.session_stats
 SHORT_TICKER_ENABLED = args.short_ticker
-APP_START_TIME = datetime.now()
-RECONFIRMATION_TIMEOUT_HOURS = 6
-RECONFIRMATION_TIMEOUT = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
 
 def write_ticker_to_file(match_history):
     ticker_file_name = "ticker.txt"
@@ -160,10 +157,14 @@ def get_match_history(limit=None):
     logging.debug(f"Getting latest matches from {endpoint}")
     match_history = urlopen(endpoint)
     match_history_json = json.loads(match_history.read())
-    logging.debug(f"Found {len(match_history_json)} matches")
+    logging.debug(f"Got {len(match_history_json)} matches")
     return match_history_json
 
 def main():
+    APP_START_TIME = datetime.now()
+    RECONFIRMATION_TIMEOUT_HOURS = 6
+    reconfirmation_timeout = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
+
     # Exit early if no features enabled
     if (MATCHES_TICKER_ENABLED == False) and (PLAYER_STATS_ENABLED == False) and (SESSION_STATS_ENABLED == False):
         logging.error("No features specified, provide one or more of --matches-ticker, --player-stats or --session-stats")
@@ -189,9 +190,11 @@ def main():
     logging.debug('Session start: %s' % (SESSION_START))
     logging.debug('App start time: %s' % (APP_START_TIME))
     while True:
-        logging.debug('Checking app timeout. Current time: %s. Timeout: %s' % (datetime.now(), RECONFIRMATION_TIMEOUT))
-        if datetime.now() > RECONFIRMATION_TIMEOUT:
-            input("Are you still streaming? Press any key to continue updating stats...")
+        timeout_exceeded = datetime.now() > reconfirmation_timeout
+        logging.debug('Timeout exceeded: %s. Current time: %s. Timeout: %s' % (timeout_exceeded, datetime.now(), reconfirmation_timeout))
+        if timeout_exceeded:
+            input("\n\nAre you still streaming? Press any key to continue updating stats...")
+            reconfirmation_timeout = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
         if (MATCHES_TICKER_ENABLED == True) or (SESSION_STATS_ENABLED == True):
             match_history = get_match_history(TICKER_GAME_HISTORY_DEPTH)
         if MATCHES_TICKER_ENABLED == True:
