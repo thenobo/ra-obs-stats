@@ -4,6 +4,7 @@ import time
 import argparse
 import logging
 from datetime import datetime
+from datetime import timedelta
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -36,6 +37,9 @@ MATCHES_TICKER_ENABLED = args.matches_ticker
 PLAYER_STATS_ENABLED = args.player_stats
 SESSION_STATS_ENABLED = args.session_stats
 SHORT_TICKER_ENABLED = args.short_ticker
+APP_START_TIME = datetime.now()
+RECONFIRMATION_TIMEOUT_HOURS = 6
+RECONFIRMATION_TIMEOUT = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
 
 def write_ticker_to_file(match_history):
     ticker_file_name = "ticker.txt"
@@ -148,8 +152,11 @@ def write_session_stats_to_file(SESSION_START, match_history):
     logging.debug(f"Closing {session_points_change_file_name}")
     session_points_change_file.close()
 
-def get_match_history():
-    endpoint = f'{BASE_URL}/Player/{PLAYER_ID}/Matches'
+def get_match_history(limit=None):
+    if limit != None:
+        endpoint = f'{BASE_URL}/Player/{PLAYER_ID}/Matches?limit={limit}'
+    else:
+        endpoint = f'{BASE_URL}/Player/{PLAYER_ID}/Matches'
     logging.debug(f"Getting latest matches from {endpoint}")
     match_history = urlopen(endpoint)
     match_history_json = json.loads(match_history.read())
@@ -180,9 +187,13 @@ def main():
     else:
         SESSION_START = datetime.utcnow()
     logging.debug('Session start: %s' % (SESSION_START))
+    logging.debug('App start time: %s' % (APP_START_TIME))
     while True:
+        logging.debug('Checking app timeout. Current time: %s. Timeout: %s' % (datetime.now(), RECONFIRMATION_TIMEOUT))
+        if datetime.now() > RECONFIRMATION_TIMEOUT:
+            input("Are you still streaming? Press any key to continue updating stats...")
         if (MATCHES_TICKER_ENABLED == True) or (SESSION_STATS_ENABLED == True):
-            match_history = get_match_history()
+            match_history = get_match_history(TICKER_GAME_HISTORY_DEPTH)
         if MATCHES_TICKER_ENABLED == True:
             write_ticker_to_file(match_history)
         if PLAYER_STATS_ENABLED == True:
