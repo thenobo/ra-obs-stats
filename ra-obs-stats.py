@@ -13,10 +13,20 @@ logging.basicConfig(
 BASE_URL = "https://cnc-stats-api.azurewebsites.net/api"
 TICKER_GAME_HISTORY_DEPTH = 3
 REFRESH_RATE_SECS = 60
-
+SHORTNAME_MAP = {
+    "Keep off the grass":"KOTG",
+    "Path beyond":"Path",
+    "Bullseye":"Bullseye",
+    "Canyon":"Canyon",
+    "Tournament ore rift":"Ore Rift",
+    "Tournament arena":"Tourny Arena",
+    "North by Northwest":"NBNW",
+    "Arena Valley Extreme":"Arena Valley",
+    }
 parser = argparse.ArgumentParser()
 parser.add_argument('id')
 parser.add_argument('--matches-ticker', dest='matches_ticker', action='store_true')
+parser.add_argument('--short-ticker', dest='short_ticker', action='store_true')
 parser.add_argument('--player-stats', dest='player_stats', action='store_true')
 parser.add_argument('--session-stats', dest='session_stats', action='store_true')
 parser.add_argument('--specify-session-start-time', dest='provided_session_start_time', type=str)
@@ -25,6 +35,7 @@ PLAYER_ID = args.id
 MATCHES_TICKER_ENABLED = args.matches_ticker
 PLAYER_STATS_ENABLED = args.player_stats
 SESSION_STATS_ENABLED = args.session_stats
+SHORT_TICKER_ENABLED = args.short_ticker
 
 def write_ticker_to_file(match_history):
     ticker_file_name = "ticker.txt"
@@ -53,7 +64,10 @@ def write_ticker_to_file(match_history):
         game_end_time_secs = int(game_start_delta.total_seconds() - last_games_json[x]['matchDuration'])
         game_end_time_mins = int(game_end_time_secs / 60)
 
-        ticker_string = ticker_string + f"{outcome} ({points}) vs {last_games_json[x]['opponentName']} {game_end_time_mins}m ago on {last_games_json[x]['mapName']} | "
+        if SHORT_TICKER_ENABLED:
+            ticker_string = ticker_string + f"{outcome[0]} ({points}) vs {last_games_json[x]['opponentName']} {game_end_time_mins}m ago on {SHORTNAME_MAP[last_games_json[x]['mapName']]} | "
+        else:    
+            ticker_string = ticker_string + f"{outcome} ({points}) vs {last_games_json[x]['opponentName']} {game_end_time_mins}m ago on {last_games_json[x]['mapName']} | "
     
     logging.debug(f"Writing '{ticker_string}' to {ticker_file_name}")
     ticker.write(ticker_string)
