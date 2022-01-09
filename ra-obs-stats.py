@@ -195,8 +195,10 @@ def main():
         if timeout_exceeded:
             input("\n\nAre you still streaming? Press any key to continue updating stats...")
             reconfirmation_timeout = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
-        if (MATCHES_TICKER_ENABLED == True) or (SESSION_STATS_ENABLED == True):
+        if (MATCHES_TICKER_ENABLED == True) and (SESSION_STATS_ENABLED == False):
             match_history = get_match_history(TICKER_GAME_HISTORY_DEPTH)
+        elif(SESSION_STATS_ENABLED == True):
+            match_history = get_match_history()
         if MATCHES_TICKER_ENABLED == True:
             write_ticker_to_file(match_history)
         if PLAYER_STATS_ENABLED == True:
