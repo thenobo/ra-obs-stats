@@ -61,7 +61,7 @@ def write_ticker_to_file(match_history):
             timestamp = timestamp.split(".", 1)[0]
 
         dt_timestamp = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S')
-        game_start_delta = datetime.now() - dt_timestamp
+        game_start_delta = datetime.utcnow() - dt_timestamp
         game_end_time_secs = int(game_start_delta.total_seconds() - last_games_json[x]['matchDuration'])
         game_end_time_mins = int(game_end_time_secs / 60)
 
