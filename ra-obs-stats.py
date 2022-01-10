@@ -100,7 +100,6 @@ def write_session_points_to_graph(SESSION_START, match_history):
             matches_since_session_start.append(match)
 
     number_of_matches_since_session_start = len(matches_since_session_start)-1
-
     match_labels = []
     points = []
     for x in range(0,number_of_matches_since_session_start):
@@ -111,7 +110,7 @@ def write_session_points_to_graph(SESSION_START, match_history):
 
     points = points[::-1]
     temp_df = pd.DataFrame({"match":match_labels, "points":points})
-    sns.lineplot(x = "match", y = "points", data=temp_df, palette='deep')
+    sns.lineplot(x = "match", y = "points", data=temp_df)
     plt.savefig('session_points.png')
 
     print(match_labels)
@@ -225,7 +224,7 @@ def main():
     logging.debug('Player ID: %s' % (PLAYER_ID))
     if args.provided_session_start_time:
         custom_start_time = args.provided_session_start_time
-        dt_timestamp = datetime(datetime.today().year, datetime.today().month, datetime.today().day, int(custom_start_time.split(":")[0]), int(custom_start_time.split(":")[1]), 00)
+        dt_timestamp = datetime(datetime.today().year, datetime.today().month, int(custom_start_time.split(":")[0]), int(custom_start_time.split(":")[1]), int(custom_start_time.split(":")[2]), 00)
         print("Using custom start time %s" % dt_timestamp)
         SESSION_START = dt_timestamp
     else:
