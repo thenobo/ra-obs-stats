@@ -77,7 +77,7 @@ def write_ticker_to_file(match_history):
     logging.debug(f"Closing {ticker_file_name}")
     ticker.close()
 
-def write_player_stats_to_file():
+def write_player_stats_to_file(player_rank, player_points, player_ratio):
     rank_file_name = "player_rank.txt"
     points_file_name = "player_points.txt"
     ratio_file_name = "player_win_ratio.txt"
@@ -87,14 +87,6 @@ def write_player_stats_to_file():
     points_file = open(points_file_name, "w+", encoding="utf-8")
     logging.debug(f"Opening {ratio_file_name} for writing")
     ratio_file = open(ratio_file_name, "w+", encoding="utf-8")
-
-    endpoint = f'{BASE_URL}/Player/{PLAYER_ID}'
-    logging.debug(f"Getting stats from {endpoint}")
-    player_stats = urlopen(endpoint)
-    player_stats_json = json.loads(player_stats.read())
-    player_rank = str(player_stats_json['position']['rank'])
-    player_points = str(int(player_stats_json['position']['points']))
-    player_ratio = f"{player_stats_json['position']['winPercentage']}"
 
     logging.debug(f"Writing {player_rank} to {rank_file_name}")
     rank_file.write(player_rank)
@@ -110,13 +102,16 @@ def write_player_stats_to_file():
     logging.debug(f"Closing {ratio_file_name}")
     ratio_file.close()
 
-def write_session_stats_to_file(SESSION_START, match_history):
+def write_session_stats_to_file(SESSION_START, match_history, session_start_player_stats, player_stats):
     session_games_played_file_name = "session_games_played.txt"
     session_points_change_file_name = "session_points_change.txt"
+    session_rank_change_file_name = "session_rank_change.txt"
     logging.debug(f"Opening {session_games_played_file_name} for writing")
     session_games_played_file = open(session_games_played_file_name, "w+", encoding="utf-8")
     logging.debug(f"Opening {session_points_change_file_name} for writing")
     session_points_change_file = open(session_points_change_file_name, "w+", encoding="utf-8")
+    logging.debug(f"Opening {session_rank_change_file_name} for writing")
+    session_rank_change_file = open(session_rank_change_file_name, "w+", encoding="utf-8")
 
     last_games_json = match_history
     matches_since_session_start = []
@@ -139,17 +134,32 @@ def write_session_stats_to_file(SESSION_START, match_history):
     number_of_matches_since_session_start = len(matches_since_session_start)-1
     most_recent_match = matches_since_session_start[0]
     first_match_of_session = matches_since_session_start[number_of_matches_since_session_start]
-    
 
     points_change_since_session_start = int(most_recent_match['playerPoints']-first_match_of_session['playerPoints'])
+    rank_change_since_session_start = (int(session_start_player_stats['player_rank'])-int(player_stats['player_rank']))
+
     logging.debug(f"Writing {number_of_matches_since_session_start} to {session_games_played_file_name}")
     session_games_played_file.write(str(number_of_matches_since_session_start))
     logging.debug(f"Writing {points_change_since_session_start} to {session_points_change_file_name}")
     session_points_change_file.write(str(points_change_since_session_start))
+    logging.debug(f"Writing {rank_change_since_session_start} to {session_rank_change_file_name}")
+    session_rank_change_file.write(str(rank_change_since_session_start))
     logging.debug(f"Closing {session_games_played_file_name}")
     session_games_played_file.close()
     logging.debug(f"Closing {session_points_change_file_name}")
     session_points_change_file.close()
+    logging.debug(f"Closing {session_rank_change_file_name}")
+    session_rank_change_file.close()
+
+def get_player_stats(id):
+    endpoint = f'{BASE_URL}/Player/{PLAYER_ID}'
+    logging.debug(f"Getting stats from {endpoint}")
+    player_stats = urlopen(endpoint)
+    player_stats_json = json.loads(player_stats.read())
+    player_rank = str(player_stats_json['position']['rank'])
+    player_points = str(int(player_stats_json['position']['points']))
+    player_ratio = f"{player_stats_json['position']['winPercentage']}"
+    return({'player_rank':player_rank, 'player_points':player_points, 'player_ratio':player_ratio})
 
 def get_match_history(limit=None):
     if limit != None:
@@ -214,6 +224,8 @@ def main():
     if (MATCHES_TICKER_ENABLED == True) or (SESSION_STATS_ENABLED == True) or (MATCHES_ENABLED == True):
         match_history = None
     
+    session_start_player_stats = get_player_stats(PLAYER_ID)
+
     logging.debug('API base: %s' % (BASE_URL))
     logging.debug('Player ID: %s' % (PLAYER_ID))
     if args.provided_session_start_time:
@@ -231,6 +243,7 @@ def main():
         if timeout_exceeded:
             input("\n\nAre you still streaming? Press any key to continue updating stats...")
             reconfirmation_timeout = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
+        player_stats = get_player_stats(PLAYER_ID)
         if ((MATCHES_TICKER_ENABLED == True) or (MATCHES_ENABLED == True)) and (SESSION_STATS_ENABLED == False):
             match_history = get_match_history(TICKER_GAME_HISTORY_DEPTH)
         elif(SESSION_STATS_ENABLED == True):
@@ -240,9 +253,9 @@ def main():
         if MATCHES_ENABLED == True:
             write_matches_to_file(match_history)
         if PLAYER_STATS_ENABLED == True:
-            write_player_stats_to_file()
+            write_player_stats_to_file(player_stats['player_rank'], player_stats['player_points'], player_stats['player_ratio'])
         if SESSION_STATS_ENABLED == True:
-            write_session_stats_to_file(SESSION_START, match_history)
+            write_session_stats_to_file(SESSION_START, match_history, session_start_player_stats, player_stats)
         
         logging.info(f"Sleeping for {REFRESH_RATE_SECS} seconds")
         time.sleep(REFRESH_RATE_SECS)
