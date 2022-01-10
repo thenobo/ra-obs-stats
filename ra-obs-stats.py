@@ -27,6 +27,7 @@ SHORTNAME_MAP = {
 parser = argparse.ArgumentParser()
 parser.add_argument('id')
 parser.add_argument('--matches-ticker', dest='matches_ticker', action='store_true')
+parser.add_argument('--matches', dest='matches', action='store_true')
 parser.add_argument('--short-ticker', dest='short_ticker', action='store_true')
 parser.add_argument('--player-stats', dest='player_stats', action='store_true')
 parser.add_argument('--session-stats', dest='session_stats', action='store_true')
@@ -37,6 +38,7 @@ MATCHES_TICKER_ENABLED = args.matches_ticker
 PLAYER_STATS_ENABLED = args.player_stats
 SESSION_STATS_ENABLED = args.session_stats
 SHORT_TICKER_ENABLED = args.short_ticker
+MATCHES_ENABLED = args.matches
 
 def write_ticker_to_file(match_history):
     ticker_file_name = "ticker.txt"
@@ -160,22 +162,56 @@ def get_match_history(limit=None):
     logging.debug(f"Got {len(match_history_json)} matches")
     return match_history_json
 
+def write_matches_to_file(match_history):
+    matches_file_name = "matches.txt"
+    logging.debug(f"Opening {matches_file_name} for writing")
+    matches = open(matches_file_name, "w+", encoding="utf-8")
+    last_games_json = match_history
+    matches_string = f""
+    for x in range(0,TICKER_GAME_HISTORY_DEPTH):
+        if last_games_json[x]['win'] == True:
+            outcome = "WIN"
+        else:
+            outcome = "LOSS"
+
+        if last_games_json[x]['pointsGained'] > 0:
+            points = "↑%s pts" % int(last_games_json[x]['pointsGained'])
+        else:
+            points = "↓%s pts" % str(int(last_games_json[x]['pointsGained'])).replace("-","")
+        
+        timestamp = last_games_json[x]['starttime']
+        # Some starttimes come back from the API with MS appended, some don't, we don't need them so always remove them
+        if "." in timestamp:
+            timestamp = timestamp.split(".", 1)[0]
+
+        dt_timestamp = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S')
+        game_start_delta = datetime.utcnow() - dt_timestamp
+        game_end_time_secs = int(game_start_delta.total_seconds() - last_games_json[x]['matchDuration'])
+        game_end_time_mins = int(game_end_time_secs / 60)
+        matches_string = matches_string + f"{game_end_time_mins}m ago {outcome} ({points}) vs {last_games_json[x]['opponentName']} on {last_games_json[x]['mapName']} \n"
+
+    logging.debug(f"Writing '{matches_string}' to {matches_file_name}")
+    matches.write(matches_string)
+    logging.debug(f"Closing {matches_file_name}")
+    matches.close()
+
 def main():
     APP_START_TIME = datetime.now()
     RECONFIRMATION_TIMEOUT_HOURS = 6
     reconfirmation_timeout = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
 
     # Exit early if no features enabled
-    if (MATCHES_TICKER_ENABLED == False) and (PLAYER_STATS_ENABLED == False) and (SESSION_STATS_ENABLED == False):
+    if (MATCHES_TICKER_ENABLED == False) and (PLAYER_STATS_ENABLED == False) and (SESSION_STATS_ENABLED == False) and (MATCHES_ENABLED == False):
         logging.error("No features specified, provide one or more of --matches-ticker, --player-stats or --session-stats")
         exit(1)
 
     logging.debug('Matches ticker: %s' % (MATCHES_TICKER_ENABLED))
     logging.debug('Player stats: %s' % (PLAYER_STATS_ENABLED))
     logging.debug('Session stats: %s' % (SESSION_STATS_ENABLED))
+    logging.debug('Matches stats: %s' % (MATCHES_ENABLED))
     
     # If we're doing something which requires the match histort, prep variable
-    if (MATCHES_TICKER_ENABLED == True) or (SESSION_STATS_ENABLED == True):
+    if (MATCHES_TICKER_ENABLED == True) or (SESSION_STATS_ENABLED == True) or (MATCHES_ENABLED == True):
         match_history = None
     
     logging.debug('API base: %s' % (BASE_URL))
@@ -195,12 +231,14 @@ def main():
         if timeout_exceeded:
             input("\n\nAre you still streaming? Press any key to continue updating stats...")
             reconfirmation_timeout = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
-        if (MATCHES_TICKER_ENABLED == True) and (SESSION_STATS_ENABLED == False):
+        if ((MATCHES_TICKER_ENABLED == True) or (MATCHES_ENABLED == True)) and (SESSION_STATS_ENABLED == False):
             match_history = get_match_history(TICKER_GAME_HISTORY_DEPTH)
         elif(SESSION_STATS_ENABLED == True):
             match_history = get_match_history()
         if MATCHES_TICKER_ENABLED == True:
             write_ticker_to_file(match_history)
+        if MATCHES_ENABLED == True:
+            write_matches_to_file(match_history)
         if PLAYER_STATS_ENABLED == True:
             write_player_stats_to_file()
         if SESSION_STATS_ENABLED == True:
