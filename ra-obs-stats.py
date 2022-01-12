@@ -230,7 +230,7 @@ def main():
     logging.debug('Player ID: %s' % (PLAYER_ID))
     if args.provided_session_start_time:
         custom_start_time = args.provided_session_start_time
-        dt_timestamp = datetime(datetime.today().year, datetime.today().month, datetime.today().day, int(custom_start_time.split(":")[0]), int(custom_start_time.split(":")[1]), 00)
+        dt_timestamp = datetime(datetime.today().year, datetime.today().month, int(custom_start_time.split(":")[0]), int(custom_start_time.split(":")[1]), int(custom_start_time.split(":")[2]), 00)
         print("Using custom start time %s" % dt_timestamp)
         SESSION_START = dt_timestamp
     else:
