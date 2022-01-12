@@ -112,11 +112,14 @@ def write_session_points_to_graph(SESSION_START, match_history):
 
     points = points[::-1]
     temp_df = pd.DataFrame({"match":match_labels, "points":points})
+    sns.set_context("poster")
     sns.lineplot(x = "match", y = "points", data=temp_df)
+    fig = plt.gcf()
+    fig.set_size_inches(10,5)
     plt.savefig('session_points.png')
-
-    print(match_labels)
-    print(points)
+    plt.clf()
+    plt.cla()
+    plt.close()
 
 def write_player_stats_to_file(player_rank, player_points, player_ratio):
 
@@ -286,8 +289,8 @@ def main():
         if timeout_exceeded:
             input("\n\nAre you still streaming? Press any key to continue updating stats...")
             reconfirmation_timeout = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
+        player_stats = get_player_stats(PLAYER_ID)
         if ((MATCHES_TICKER_ENABLED == True) or (MATCHES_ENABLED == True)) and ((SESSION_STATS_ENABLED == False) and (SESSION_STATS_GRAPHS_ENABLED == False)):
-            player_stats = get_player_stats(PLAYER_ID)
             match_history = get_match_history(TICKER_GAME_HISTORY_DEPTH)
         elif((SESSION_STATS_ENABLED == True) or (SESSION_STATS_GRAPHS_ENABLED == True)):
             match_history = get_match_history()
@@ -298,9 +301,9 @@ def main():
         if PLAYER_STATS_ENABLED == True:
             write_player_stats_to_file(player_stats['player_rank'], player_stats['player_points'], player_stats['player_ratio'])
         if SESSION_STATS_ENABLED == True:
-            write_session_stats_to_file(SESSION_START, match_history)
-        if SESSION_STATS_GRAPHS_ENABLED == True:
             write_session_stats_to_file(SESSION_START, match_history, session_start_player_stats, player_stats)
+        if SESSION_STATS_GRAPHS_ENABLED == True:
+            write_session_points_to_graph(SESSION_START, match_history)
         
         logging.info(f"Sleeping for {REFRESH_RATE_SECS} seconds")
         time.sleep(REFRESH_RATE_SECS)
