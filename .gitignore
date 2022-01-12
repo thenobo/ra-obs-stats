@@ -5,3 +5,4 @@ dist/
 ra-obs-stats.dist
 ra-obs-stats.onefile.build
 *.png
+dist/ra-obs-stats.exe
