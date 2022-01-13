@@ -5,6 +5,9 @@ import argparse
 import logging
 from datetime import datetime
 from datetime import timedelta
+import seaborn as sns # for data visualization
+import pandas as pd # for data analysis
+import matplotlib.pyplot as plt # for data visualization
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -32,12 +35,14 @@ parser.add_argument('--short-ticker', dest='short_ticker', action='store_true')
 parser.add_argument('--player-stats', dest='player_stats', action='store_true')
 parser.add_argument('--session-stats', dest='session_stats', action='store_true')
 parser.add_argument('--specify-session-start-time', dest='provided_session_start_time', type=str)
+parser.add_argument('--session-stats-graphs', dest='session_stats_graphs', action='store_true')
 args = parser.parse_args()
 PLAYER_ID = args.id
 MATCHES_TICKER_ENABLED = args.matches_ticker
 PLAYER_STATS_ENABLED = args.player_stats
 SESSION_STATS_ENABLED = args.session_stats
 SHORT_TICKER_ENABLED = args.short_ticker
+SESSION_STATS_GRAPHS_ENABLED = args.session_stats_graphs
 MATCHES_ENABLED = args.matches
 
 def write_ticker_to_file(match_history):
@@ -77,7 +82,47 @@ def write_ticker_to_file(match_history):
     logging.debug(f"Closing {ticker_file_name}")
     ticker.close()
 
+def write_session_points_to_graph(SESSION_START, match_history):
+    last_games_json = match_history
+    matches_since_session_start = []
+    first_match_of_session_found = False
+    for match in last_games_json:
+        timestamp = match['starttime']
+        # Some starttimes come back from the API with MS appended, some don't, we don't need them so always remove them
+        if "." in timestamp:
+            timestamp = timestamp.split(".", 1)[0]
+
+        dt_timestamp = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S')
+        if (SESSION_START<dt_timestamp):
+            matches_since_session_start.append(match)
+        elif first_match_of_session_found == True:
+            break
+        else:
+            first_match_of_session_found = True
+            matches_since_session_start.append(match)
+
+    number_of_matches_since_session_start = len(matches_since_session_start)-1
+    match_labels = []
+    points = []
+    for x in range(0,number_of_matches_since_session_start):
+        match_labels.append(x)
+
+    for x in range(0,number_of_matches_since_session_start):
+        points.append(int(matches_since_session_start[x]['playerPoints']))
+
+    points = points[::-1]
+    temp_df = pd.DataFrame({"match":match_labels, "points":points})
+    sns.set_context("poster")
+    sns.lineplot(x = "match", y = "points", data=temp_df)
+    fig = plt.gcf()
+    fig.set_size_inches(10,5)
+    plt.savefig('session_points.png')
+    plt.clf()
+    plt.cla()
+    plt.close()
+
 def write_player_stats_to_file(player_rank, player_points, player_ratio):
+
     rank_file_name = "player_rank.txt"
     points_file_name = "player_points.txt"
     ratio_file_name = "player_win_ratio.txt"
@@ -211,13 +256,14 @@ def main():
     reconfirmation_timeout = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
 
     # Exit early if no features enabled
-    if (MATCHES_TICKER_ENABLED == False) and (PLAYER_STATS_ENABLED == False) and (SESSION_STATS_ENABLED == False) and (MATCHES_ENABLED == False):
+    if (MATCHES_TICKER_ENABLED == False) and (PLAYER_STATS_ENABLED == False) and (SESSION_STATS_ENABLED == False) and (SESSION_STATS_GRAPHS_ENABLED == False) and (MATCHES_ENABLED == False):
         logging.error("No features specified, provide one or more of --matches-ticker, --player-stats or --session-stats")
         exit(1)
 
     logging.debug('Matches ticker: %s' % (MATCHES_TICKER_ENABLED))
     logging.debug('Player stats: %s' % (PLAYER_STATS_ENABLED))
     logging.debug('Session stats: %s' % (SESSION_STATS_ENABLED))
+    logging.debug('Session stats graphs: %s' % (SESSION_STATS_GRAPHS_ENABLED))
     logging.debug('Matches stats: %s' % (MATCHES_ENABLED))
     
     # If we're doing something which requires the match histort, prep variable
@@ -244,9 +290,9 @@ def main():
             input("\n\nAre you still streaming? Press any key to continue updating stats...")
             reconfirmation_timeout = datetime.now() + timedelta(hours=RECONFIRMATION_TIMEOUT_HOURS)
         player_stats = get_player_stats(PLAYER_ID)
-        if ((MATCHES_TICKER_ENABLED == True) or (MATCHES_ENABLED == True)) and (SESSION_STATS_ENABLED == False):
+        if ((MATCHES_TICKER_ENABLED == True) or (MATCHES_ENABLED == True)) and ((SESSION_STATS_ENABLED == False) and (SESSION_STATS_GRAPHS_ENABLED == False)):
             match_history = get_match_history(TICKER_GAME_HISTORY_DEPTH)
-        elif(SESSION_STATS_ENABLED == True):
+        elif((SESSION_STATS_ENABLED == True) or (SESSION_STATS_GRAPHS_ENABLED == True)):
             match_history = get_match_history()
         if MATCHES_TICKER_ENABLED == True:
             write_ticker_to_file(match_history)
@@ -256,6 +302,8 @@ def main():
             write_player_stats_to_file(player_stats['player_rank'], player_stats['player_points'], player_stats['player_ratio'])
         if SESSION_STATS_ENABLED == True:
             write_session_stats_to_file(SESSION_START, match_history, session_start_player_stats, player_stats)
+        if SESSION_STATS_GRAPHS_ENABLED == True:
+            write_session_points_to_graph(SESSION_START, match_history)
         
         logging.info(f"Sleeping for {REFRESH_RATE_SECS} seconds")
         time.sleep(REFRESH_RATE_SECS)
