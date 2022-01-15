@@ -82,10 +82,11 @@ def write_ticker_to_file(match_history):
     logging.debug(f"Closing {ticker_file_name}")
     ticker.close()
 
-def write_session_points_to_graph(SESSION_START, match_history):
+def write_session_points_to_graph(SESSION_START, match_history, player_name, session_start_time):
     last_games_json = match_history
     matches_since_session_start = []
     first_match_of_session_found = False
+    last_match_index = -1
     for match in last_games_json:
         timestamp = match['starttime']
         # Some starttimes come back from the API with MS appended, some don't, we don't need them so always remove them
@@ -100,20 +101,69 @@ def write_session_points_to_graph(SESSION_START, match_history):
         else:
             first_match_of_session_found = True
             matches_since_session_start.append(match)
+            last_match_index = int(list(last_games_json).index(match) + 1)
+        if last_match_index != -1:
+            matches_since_session_start.append(list(last_games_json)[last_match_index])
 
     number_of_matches_since_session_start = len(matches_since_session_start)-1
     match_labels = []
     points = []
+
     for x in range(0,number_of_matches_since_session_start):
         match_labels.append(x)
 
     for x in range(0,number_of_matches_since_session_start):
         points.append(int(matches_since_session_start[x]['playerPoints']))
 
+    maxPoints = max(points)
+    minPoints = min(points)
+
     points = points[::-1]
-    temp_df = pd.DataFrame({"match":match_labels, "points":points})
-    sns.set_context("poster")
-    sns.lineplot(x = "match", y = "points", data=temp_df)
+    plt.style.use("dark_background")
+    for param in ['text.color', 'axes.labelcolor', 'xtick.color', 'ytick.color']:
+        plt.rcParams[param] = '0.9'  # very light grey
+    for param in ['figure.facecolor', 'axes.facecolor', 'savefig.facecolor']:
+        plt.rcParams[param] = '#212946'  # bluish dark grey
+    colors = [
+    '#08F7FE',  # teal/cyan
+    '#FE53BB',  # pink
+    '#F5D300',  # yellow
+    '#00ff41',  # matrix green
+    ]
+
+    temp_df = pd.DataFrame({"points":points})
+    fig, ax = plt.subplots()
+    temp_df.plot(marker='o',color=colors, ax=ax, legend=False)
+    # Redraw the data with low alpha and slighty increased linewidth:
+    n_shades = 10
+    diff_linewidth = 1.05
+    alpha_value = 0.3 / n_shades
+
+    for n in range(1, n_shades+1):
+
+        temp_df.plot(marker='o',
+                linewidth=2+(diff_linewidth*n),
+                alpha=alpha_value,
+                legend=False,
+                ax=ax,
+                color=colors)
+
+    # Color the areas below the lines:
+    for column, color in zip(temp_df, colors):
+        ax.fill_between(x=temp_df.index,
+                        y1=temp_df[column].values,
+                        y2=[0] * len(temp_df),
+                        color=color,
+                        alpha=0.1)
+
+    ax.grid(color='#2A3459')
+
+    ax.set_xlim([ax.get_xlim()[0] - 0.2, ax.get_xlim()[1] + 0.2])  # to not have the markers cut off
+    ax.set_ylim(minPoints - 50, maxPoints + 50)
+    ax.set_xlabel("Game #")
+    ax.set_title("%s (games since %s)" % (player_name, session_start_time))
+    #sns.set_context("poster")
+    sns.lineplot(y = "points", data=temp_df, legend=False)
     fig = plt.gcf()
     fig.set_size_inches(10,5)
     plt.savefig('session_points.png')
@@ -122,7 +172,6 @@ def write_session_points_to_graph(SESSION_START, match_history):
     plt.close()
 
 def write_player_stats_to_file(player_rank, player_points, player_ratio):
-
     rank_file_name = "player_rank.txt"
     points_file_name = "player_points.txt"
     ratio_file_name = "player_win_ratio.txt"
@@ -204,7 +253,8 @@ def get_player_stats(id):
     player_rank = str(player_stats_json['position']['rank'])
     player_points = str(int(player_stats_json['position']['points']))
     player_ratio = f"{player_stats_json['position']['winPercentage']}"
-    return({'player_rank':player_rank, 'player_points':player_points, 'player_ratio':player_ratio})
+    player_name = f"{player_stats_json['position']['name']}"
+    return({'player_rank':player_rank, 'player_points':player_points, 'player_ratio':player_ratio, 'player_name':player_name})
 
 def get_match_history(limit=None):
     if limit != None:
@@ -276,7 +326,7 @@ def main():
     logging.debug('Player ID: %s' % (PLAYER_ID))
     if args.provided_session_start_time:
         custom_start_time = args.provided_session_start_time
-        dt_timestamp = datetime(datetime.today().year, datetime.today().month, int(custom_start_time.split(":")[0]), int(custom_start_time.split(":")[1]), int(custom_start_time.split(":")[2]), 00)
+        dt_timestamp = datetime(int(custom_start_time.split(":")[0]), int(custom_start_time.split(":")[1]), int(custom_start_time.split(":")[2]), int(custom_start_time.split(":")[3]), int(custom_start_time.split(":")[4]), 00)
         print("Using custom start time %s" % dt_timestamp)
         SESSION_START = dt_timestamp
     else:
@@ -303,7 +353,7 @@ def main():
         if SESSION_STATS_ENABLED == True:
             write_session_stats_to_file(SESSION_START, match_history, session_start_player_stats, player_stats)
         if SESSION_STATS_GRAPHS_ENABLED == True:
-            write_session_points_to_graph(SESSION_START, match_history)
+            write_session_points_to_graph(SESSION_START, match_history, session_start_player_stats['player_name'], SESSION_START)
         
         logging.info(f"Sleeping for {REFRESH_RATE_SECS} seconds")
         time.sleep(REFRESH_RATE_SECS)
