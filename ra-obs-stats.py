@@ -8,6 +8,7 @@ from datetime import timedelta
 import seaborn as sns # for data visualization
 import pandas as pd # for data analysis
 import matplotlib.pyplot as plt # for data visualization
+import code
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -300,6 +301,38 @@ def write_matches_to_file(match_history):
     logging.debug(f"Closing {matches_file_name}")
     matches.close()
 
+def session_opponent_stats(SESSION_START, match_history):
+    session_matches = []
+    for match in match_history:
+        timestamp = timestamp = match['starttime']
+        if "." in timestamp:
+            timestamp = timestamp.split(".", 1)[0]
+        dt_timestamp = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S')
+        if dt_timestamp > SESSION_START:
+            session_matches.append(match)
+
+    opponent_points_stats = {}
+    for match in session_matches:
+        opponent_name = match['opponentName']
+        points_diff = match['pointsGained']
+        if opponent_name not in opponent_points_stats:
+            opponent_points_stats[opponent_name] = points_diff
+        else:
+            opponent_points_stats[opponent_name] = opponent_points_stats[opponent_name] + points_diff
+
+    temp_for_df = []
+    for opponent in opponent_points_stats:
+        temp_for_df.append({'opponentName': opponent, 'pointsDiff': opponent_points_stats[opponent]})
+
+    df = pd.DataFrame.from_dict(temp_for_df)
+    fig = sns.barplot(x="opponentName", y="pointsDiff", data=df)
+    fig.figure.tight_layout()
+    plt.xticks(rotation=90)
+    plt.savefig('session_points.png')
+    plt.clf()
+    plt.cla()
+    plt.close()
+
 def main():
     APP_START_TIME = datetime.now()
     RECONFIRMATION_TIMEOUT_HOURS = 6
@@ -354,7 +387,7 @@ def main():
             write_session_stats_to_file(SESSION_START, match_history, session_start_player_stats, player_stats)
         if SESSION_STATS_GRAPHS_ENABLED == True:
             write_session_points_to_graph(SESSION_START, match_history, session_start_player_stats['player_name'], SESSION_START)
-        
+            session_opponent_stats(SESSION_START, match_history)
         logging.info(f"Sleeping for {REFRESH_RATE_SECS} seconds")
         time.sleep(REFRESH_RATE_SECS)
 
