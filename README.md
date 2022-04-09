@@ -41,6 +41,7 @@ A few notes before you get started:
     * Your text box should look like one of the following examples:
       * `C:\Users\nobo\Downloads\ra-obs-stats.py --player-stats 76561199198631818`
       * `"C:\Users\the nobo\Downloads\ra-obs-stats.py" --player-stats 76561199198631818`
+      * `"C:\Users\the nobo\Downloads\ra-obs-stats.py" --player-stats --matches-ticker --session-stats 76561199198631818`
   * Press next and then 'Finish'.
   * Double click the shortcut you just created, you should see something similar to this
     * ![](https://i.imgur.com/42gTsIw.png)
